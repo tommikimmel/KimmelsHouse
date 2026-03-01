@@ -157,10 +157,14 @@ export const AppProvider = ({ children }) => {
   // Funciones para transacciones
   const addTransaction = async (transaction) => {
     try {
+      // Crear fecha en hora local, no UTC
+      const [year, month, day] = transaction.date.split('-').map(Number);
+      const localDate = new Date(year, month - 1, day, 12, 0, 0); // Mediodía para evitar cambios de zona horaria
+      
       const transactionData = {
         ...transaction,
         amount: Number(transaction.amount),
-        date: Timestamp.fromDate(new Date(transaction.date)),
+        date: Timestamp.fromDate(localDate),
         createdAt: Timestamp.now()
       };
       await addDoc(collection(db, 'transactions'), transactionData);
@@ -177,10 +181,22 @@ export const AppProvider = ({ children }) => {
 
   const updateTransaction = async (id, transaction) => {
     try {
+      let dateToSave;
+      if (transaction.date instanceof Timestamp) {
+        dateToSave = transaction.date;
+      } else if (typeof transaction.date === 'string') {
+        // Crear fecha en hora local, no UTC
+        const [year, month, day] = transaction.date.split('-').map(Number);
+        const localDate = new Date(year, month - 1, day, 12, 0, 0); // Mediodía para evitar cambios de zona horaria
+        dateToSave = Timestamp.fromDate(localDate);
+      } else {
+        dateToSave = Timestamp.fromDate(transaction.date);
+      }
+      
       const transactionData = {
         ...transaction,
         amount: Number(transaction.amount),
-        date: transaction.date instanceof Timestamp ? transaction.date : Timestamp.fromDate(new Date(transaction.date)),
+        date: dateToSave,
         updatedAt: Timestamp.now()
       };
       await updateDoc(doc(db, 'transactions', id), transactionData);

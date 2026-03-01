@@ -13,21 +13,21 @@ const Toast = ({ id, type, message, onClose }) => {
   const types = {
     success: {
       icon: CheckCircle,
-      bgColor: 'bg-blue-500/90',
-      borderColor: 'border-blue-400',
-      iconColor: 'text-white'
+      bgColor: '',
+      borderColor: '',
+      iconColor: ''
     },
     error: {
       icon: AlertCircle,
-      bgColor: 'bg-red-900/90',
-      borderColor: 'border-red-700',
-      iconColor: 'text-red-300'
+      bgColor: '',
+      borderColor: '',
+      iconColor: ''
     },
     warning: {
       icon: AlertTriangle,
-      bgColor: 'bg-yellow-700/90',
-      borderColor: 'border-yellow-500',
-      iconColor: 'text-yellow-200'
+      bgColor: '',
+      borderColor: '',
+      iconColor: ''
     }
   };
 
@@ -35,14 +35,14 @@ const Toast = ({ id, type, message, onClose }) => {
   const Icon = config.icon;
 
   return (
-    <div className={`${config.bgColor} ${config.borderColor} backdrop-blur-md border-2 rounded-lg p-4 shadow-2xl flex items-center gap-3 min-w-[320px] animate-slide-in`}>
-      <Icon className={`w-6 h-6 ${config.iconColor} flex-shrink-0`} />
-      <p className="text-white flex-1 font-medium">{message}</p>
+    <div className={`toast ${type}`}>
+      <Icon />
+      <p>{message}</p>
       <button
+        className="btn btn-secondary"
         onClick={() => onClose(id)}
-        className="text-white/70 hover:text-white transition-colors"
       >
-        <X className="w-5 h-5" />
+        <X />
       </button>
     </div>
   );

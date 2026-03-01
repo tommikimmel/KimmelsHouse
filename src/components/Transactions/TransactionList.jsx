@@ -46,99 +46,116 @@ const TransactionList = ({ onEdit }) => {
   });
 
   return (
-    <div className="bg-gradient-to-br from-dark-card to-dark-hover rounded-lg p-4 sm:p-6 border border-accent-primary/30 shadow-xl">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
-        <h2 className="text-xl sm:text-2xl font-bold text-white">Transacciones</h2>
-        <div className="flex flex-wrap gap-2">
+    <div className="card">
+      <div className="card-header">
+        <div>
+          <h2 className="card-title">💳 Mis Transacciones</h2>
+          <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>
+            Historial completo de ingresos y gastos
+          </p>
+        </div>
+        <div className="filters" style={{ gap: '8px' }}>
           <button
+            className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
             onClick={() => setFilter('all')}
-            className={`px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm sm:text-base ${
-              filter === 'all'
-                ? 'bg-accent-primary text-white'
-                : 'bg-dark-hover text-gray-300 hover:bg-dark-border'
-            }`}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
-            Todas
+            📋 Todas
           </button>
           <button
+            className={`filter-btn ${filter === 'income' ? 'active' : ''}`}
             onClick={() => setFilter('income')}
-            className={`px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm sm:text-base ${
-              filter === 'income'
-                ? 'bg-blue-400 text-white'
-                : 'bg-dark-hover text-gray-300 hover:bg-dark-border'
-            }`}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
-            Ingresos
+            <ArrowUpCircle size={16} /> Ingresos
           </button>
           <button
+            className={`filter-btn ${filter === 'expense' ? 'active' : ''}`}
             onClick={() => setFilter('expense')}
-            className={`px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm sm:text-base ${
-              filter === 'expense'
-                ? 'bg-blue-600 text-white'
-                : 'bg-dark-hover text-gray-300 hover:bg-dark-border'
-            }`}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
-            Egresos
+            <ArrowDownCircle size={16} /> Gastos
           </button>
         </div>
       </div>
 
       {filteredTransactions.length === 0 ? (
-        <p className="text-gray-400 text-center py-8">No hay transacciones registradas</p>
+        <div style={{ padding: '48px', textAlign: 'center', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
+          <p style={{ fontSize: '16px', color: '#6b7280', marginBottom: '8px' }}>
+            No hay transacciones para mostrar
+          </p>
+          <p style={{ fontSize: '12px', color: '#9ca3af' }}>
+            {filter === 'all' ? 'Agrega tu primera transacción usando el botón "+" arriba' :
+             filter === 'income' ? 'No hay ingresos registrados' : 'No hay gastos registrados'}
+          </p>
+        </div>
       ) : (
-        <div className="overflow-x-auto -mx-4 sm:mx-0">
-          <div className="inline-block min-w-full align-middle px-4 sm:px-0">
-            <table className="w-full">
+        <div className="table-container">
+          <div style={{ marginBottom: '12px', padding: '12px', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
+            <p style={{ margin: 0, fontSize: '14px', color: '#4b5563' }}>
+              Mostrando <strong>{filteredTransactions.length}</strong> {filteredTransactions.length === 1 ? 'transacción' : 'transacciones'}
+              {filter !== 'all' && ` (${filter === 'income' ? 'Ingresos' : 'Gastos'})`}
+            </p>
+          </div>
+          <div>
+            <table>
             <thead>
-              <tr className="border-b border-dark-border">
-                <th className="text-left py-3 px-2 text-white">Tipo</th>
-                <th className="text-left py-3 px-2 text-white">Fecha</th>
-                <th className="text-left py-3 px-2 text-white">Categoría</th>
-                <th className="text-left py-3 px-2 text-white">Cuenta</th>
-                <th className="text-left py-3 px-2 text-white">Persona</th>
-                <th className="text-left py-3 px-2 text-white">Descripción</th>
-                <th className="text-right py-3 px-2 text-white">Monto</th>
-                <th className="text-right py-3 px-2 text-white">Acciones</th>
+              <tr>
+                <th style={{ textAlign: 'center' }}>💼 Tipo</th>
+                <th>📅 Fecha</th>
+                <th>📁 Categoría</th>
+                <th>🏦 Cuenta</th>
+                <th>👤 Persona</th>
+                <th>📝 Descripción</th>
+                <th style={{ textAlign: 'right' }}>💰 Monto</th>
+                <th style={{ textAlign: 'center' }}>⚙️ Acciones</th>
               </tr>
             </thead>
             <tbody>
               {filteredTransactions.map(transaction => (
-                <tr key={transaction.id} className="border-b border-dark-border hover:bg-dark-hover transition-colors">
-                  <td className="py-3 px-2">
+                <tr key={transaction.id} style={{ 
+                  borderLeft: `4px solid ${transaction.type === 'income' ? '#28a745' : transaction.type === 'transfer' ? '#007bff' : '#dc3545'}` 
+                }}>
+                  <td style={{ textAlign: 'center' }}>
                     {transaction.type === 'income' ? (
-                      <ArrowUpCircle className="w-5 h-5 text-blue-400" />
+                      <ArrowUpCircle size={20} style={{ color: '#28a745' }} />
                     ) : transaction.type === 'transfer' ? (
-                      <ArrowRightLeft className="w-5 h-5 text-accent-primary" />
+                      <ArrowRightLeft size={20} style={{ color: '#007bff' }} />
                     ) : (
-                      <ArrowDownCircle className="w-5 h-5 text-blue-600" />
+                      <ArrowDownCircle size={20} style={{ color: '#dc3545' }} />
                     )}
                   </td>
-                  <td className="py-3 px-2 text-gray-300">{formatDate(transaction.date)}</td>
-                  <td className="py-3 px-2 text-gray-300">{getCategoryName(transaction.categoryId)}</td>
-                  <td className="py-3 px-2 text-gray-300">{getAccountName(transaction.accountId)}</td>
-                  <td className="py-3 px-2 text-gray-300">{getPersonName(transaction.personId)}</td>
-                  <td className="py-3 px-2 text-gray-300">{transaction.description || '-'}</td>
-                  <td className={`py-3 px-2 text-right font-bold ${
-                    transaction.type === 'income' ? 'text-blue-400' : 'text-blue-600'
-                  }`}>
+                  <td style={{ fontWeight: '500' }}>{formatDate(transaction.date)}</td>
+                  <td>{getCategoryName(transaction.categoryId)}</td>
+                  <td>{getAccountName(transaction.accountId)}</td>
+                  <td>{getPersonName(transaction.personId)}</td>
+                  <td style={{ color: '#6b7280' }}>{transaction.description || '-'}</td>
+                  <td style={{ 
+                    textAlign: 'right', 
+                    fontWeight: '700',
+                    fontSize: '15px',
+                    color: transaction.type === 'income' ? '#28a745' : '#dc3545'
+                  }}>
                     {transaction.type === 'income' ? '+' : '-'}
                     {formatCurrency(transaction.amount)}
                   </td>
-                  <td className="py-3 px-2">
-                    <div className="flex gap-2 justify-end">
+                  <td>
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
                       <button
+                        className="btn btn-secondary"
                         onClick={() => onEdit(transaction)}
-                        className="text-accent-primary hover:text-accent-hover"
-                        title="Editar"
+                        title="Editar transacción"
+                        style={{ padding: '6px 12px' }}
                       >
-                        <Edit2 className="w-4 h-4" />
+                        <Edit2 size={16} />
                       </button>
                       <button
+                        className="btn btn-secondary"
                         onClick={() => handleDelete(transaction.id)}
-                        className="text-red-600 hover:text-red-700"
-                        title="Eliminar"
+                        title="Eliminar transacción"
+                        style={{ padding: '6px 12px' }}
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   </td>

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useApp } from '../../hooks/useApp';
 import { useStats } from '../../hooks/useStats';
-import { TrendingUp, TrendingDown, DollarSign, PieChart, BarChart3 } from 'lucide-react';
-import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { TrendingUp, TrendingDown, DollarSign, BarChart3, PieChart as PieChartIcon } from 'lucide-react';
+import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 
 const Dashboard = () => {
   const { accounts, transactions, loading } = useApp();
@@ -12,8 +12,8 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-400">Cargando...</div>
+      <div className="card">
+        <div>Cargando...</div>
       </div>
     );
   }
@@ -27,131 +27,256 @@ const Dashboard = () => {
 
   // Preparar datos para el gráfico según tipo y vista
   const getChartData = () => {
-    if (chartView === 'category') {
-      const data = chartType === 'income' ? stats.incomesByCategory : stats.expensesByCategory;
-      return data.map(cat => ({
-        name: cat.name,
-        value: cat.total,
-        color: cat.color
-      }));
-    } else if (chartView === 'person') {
-      const data = chartType === 'income' ? stats.incomesByPerson : stats.expensesByPerson;
-      return data.map(person => ({
-        name: person.name,
-        value: person.total,
-        color: chartType === 'income' ? '#60a5fa' : '#3b82f6'
-      }));
-    } else if (chartView === 'month') {
-      // Agrupar por mes
-      const monthlyData = {};
-      const filteredTransactions = transactions.filter(t => t.type === chartType);
+    if (chartView === 'category' || chartView === 'person') {
+      // Para categoría y persona: solo datos del MES ACTUAL
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
       
-      filteredTransactions.forEach(transaction => {
-        const date = transaction.date?.toDate ? transaction.date.toDate() : new Date(transaction.date);
-        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        const monthName = date.toLocaleString('es-AR', { month: 'short', year: 'numeric' });
-        
-        if (!monthlyData[monthKey]) {
-          monthlyData[monthKey] = { name: monthName, value: 0, date: date };
-        }
-        monthlyData[monthKey].value += transaction.amount;
+      const filteredTransactions = transactions.filter(t => {
+        if (t.type !== chartType) return false;
+        const date = t.date?.toDate ? t.date.toDate() : new Date(t.date);
+        return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
       });
 
-      // Ordenar por fecha y tomar los últimos 6 meses
-      return Object.values(monthlyData)
-        .sort((a, b) => a.date - b.date)
-        .slice(-6)
-        .map(item => ({
-          name: item.name,
-          value: item.value,
-          color: chartType === 'income' ? '#60a5fa' : '#3b82f6'
-        }));
+      // Agrupar por categoría o persona
+      const groupedData = {};
+      
+      filteredTransactions.forEach(transaction => {
+        if (chartView === 'category') {
+          const categoryId = transaction.categoryId;
+          if (!groupedData[categoryId]) {
+            const category = (chartType === 'income' ? stats.incomesByCategory : stats.expensesByCategory)
+              .find(c => c.id === categoryId);
+            if (category) {
+              groupedData[categoryId] = {
+                id: categoryId,
+                name: category.name,
+                icon: category.icon || '',
+                value: 0,
+                color: category.color
+              };
+            }
+          }
+          if (groupedData[categoryId]) {
+            groupedData[categoryId].value += transaction.amount;
+          }
+        } else {
+          const personId = transaction.personId;
+          if (!groupedData[personId]) {
+            const person = (chartType === 'income' ? stats.incomesByPerson : stats.expensesByPerson)
+              .find(p => p.id === personId);
+            if (person) {
+              groupedData[personId] = {
+                id: personId,
+                name: person.name,
+                value: 0,
+                color: person.color || (chartType === 'income' ? '#28a745' : '#dc3545')
+              };
+            }
+          }
+          if (groupedData[personId]) {
+            groupedData[personId].value += transaction.amount;
+          }
+        }
+      });
+
+      const dataArray = Object.values(groupedData).sort((a, b) => b.value - a.value);
+
+      return {
+        type: 'pie',
+        data: dataArray,
+        keys: null
+      };
+    } else {
+      // Vista por mes (todos los meses del año actual)
+      const filteredTransactions = transactions.filter(t => t.type === chartType);
+      const monthlyData = {};
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      
+      // Inicializar estructura de meses (12 meses del año actual)
+      for (let i = 0; i < 12; i++) {
+        const date = new Date(currentYear, i, 1);
+        const monthKey = `${currentYear}-${String(i + 1).padStart(2, '0')}`;
+        const monthName = date.toLocaleString('es-AR', { month: 'short' });
+        monthlyData[monthKey] = { name: monthName, monthKey: monthKey, total: 0 };
+      }
+
+      filteredTransactions.forEach(transaction => {
+        const date = transaction.date?.toDate ? transaction.date.toDate() : new Date(transaction.date);
+        if (date.getFullYear() === currentYear) {
+          const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+          
+          if (monthlyData[monthKey]) {
+            monthlyData[monthKey].total = (monthlyData[monthKey].total || 0) + transaction.amount;
+          }
+        }
+      });
+
+      return {
+        type: 'bar',
+        data: Object.values(monthlyData),
+        keys: [{ name: 'total', color: chartType === 'income' ? '#28a745' : '#dc3545' }]
+      };
     }
-    return [];
   };
 
-  const chartData = getChartData();
+  const chartDataObj = getChartData();
+  const chartData = chartDataObj.data;
+  const chartKeys = chartDataObj.keys;
+  const chartDisplayType = chartDataObj.type;
 
-  const CustomTooltip = ({ active, payload }) => {
+  const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-dark-card border border-accent-primary/50 rounded-lg p-3 shadow-xl">
-          <p className="text-white font-semibold">{payload[0].name}</p>
-          <p className={`font-bold ${chartType === 'income' ? 'text-blue-400' : 'text-blue-600'}`}>
-            {formatCurrency(payload[0].value)}
+        <div style={{ 
+          backgroundColor: 'white', 
+          padding: '12px', 
+          border: '1px solid #e5e7eb',
+          borderRadius: '8px',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+          maxWidth: '250px'
+        }}>
+          <p style={{ margin: '0 0 8px 0', fontWeight: '600', color: '#1f2937', borderBottom: '1px solid #e5e7eb', paddingBottom: '4px' }}>
+            {payload[0].name || label}
           </p>
+          {chartDisplayType === 'pie' ? (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+              <span style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>
+                {formatCurrency(payload[0].value)}
+              </span>
+            </div>
+          ) : (
+            payload.map((entry, index) => (
+              <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ width: '12px', height: '12px', backgroundColor: entry.color, borderRadius: '2px' }}></div>
+                  <span style={{ fontSize: '13px', color: '#4b5563' }}>{entry.name === 'total' ? 'Total' : entry.name}:</span>
+                </div>
+                <span style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937', marginLeft: '12px' }}>
+                  {formatCurrency(entry.value)}
+                </span>
+              </div>
+            ))
+          )}
         </div>
       );
     }
     return null;
   };
 
+  // Obtener el nombre del mes actual
+  const getCurrentMonthName = () => {
+    const now = new Date();
+    return now.toLocaleString('es-AR', { month: 'long', year: 'numeric' });
+  };
+
   return (
-    <div className="space-y-6">
+    <div>
+      {/* Título Principal */}
+      <div className="card">
+        <div className="card-header">
+          <h1 className="card-title">Panel de Control Financiero</h1>
+        </div>
+        <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '8px' }}>
+          Resumen completo de tus finanzas, cuentas y transacciones
+        </p>
+      </div>
+
       {/* Resumen de Balance */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 border-l-4 border-blue-400 rounded-lg p-4 sm:p-6 shadow-lg">
-          <div className="flex items-center justify-between">
+      <div className="card">
+        <h2 className="card-title" style={{ marginBottom: '16px' }}>📊 Resumen Financiero</h2>
+        <div className="grid grid-3">
+          <div className="stat-card">
             <div>
-              <p className="text-sm text-gray-400">Ingresos Totales</p>
-              <p className="text-xl sm:text-2xl font-bold text-blue-400 mt-1">
-                {formatCurrency(stats.totalIncome)}
-              </p>
-            </div>
-            <div className="bg-blue-500/20 p-2 sm:p-3 rounded-full">
-              <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
+              <div>
+                <p className="stat-label">💰 Ingresos Totales</p>
+                <p style={{ fontSize: '12px', color: '#6b7280', margin: '4px 0 8px 0' }}>
+                  Todo el dinero que has recibido
+                </p>
+                <p className="stat-value success">
+                  {formatCurrency(stats.totalIncome)}
+                </p>
+              </div>
+              <div>
+                <TrendingUp size={32} style={{ color: '#28a745' }} />
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="bg-gradient-to-br from-blue-700/10 to-blue-800/10 border-l-4 border-blue-600 rounded-lg p-4 sm:p-6 shadow-lg">
-          <div className="flex items-center justify-between">
+          <div className="stat-card">
             <div>
-              <p className="text-sm text-gray-400">Gastos Totales</p>
-              <p className="text-xl sm:text-2xl font-bold text-blue-600 mt-1">
-                {formatCurrency(stats.totalExpense)}
-              </p>
-            </div>
-            <div className="bg-blue-600/20 p-2 sm:p-3 rounded-full">
-              <TrendingDown className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+              <div>
+                <p className="stat-label">💸 Gastos Totales</p>
+                <p style={{ fontSize: '12px', color: '#6b7280', margin: '4px 0 8px 0' }}>
+                  Todo el dinero que has gastado
+                </p>
+                <p className="stat-value danger">
+                  {formatCurrency(stats.totalExpense)}
+                </p>
+              </div>
+              <div>
+                <TrendingDown size={32} style={{ color: '#dc3545' }} />
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className={`bg-gradient-to-br ${stats.balance >= 0 ? 'from-blue-500/10 to-blue-600/10 border-accent-primary' : 'from-orange-500/10 to-red-500/10 border-orange-500'} border-l-4 rounded-lg p-4 sm:p-6 shadow-lg sm:col-span-2 lg:col-span-1`}>
-          <div className="flex items-center justify-between">
+          <div className="stat-card">
             <div>
-              <p className="text-sm text-gray-400">Balance</p>
-              <p className={`text-xl sm:text-2xl font-bold mt-1 ${stats.balance >= 0 ? 'text-accent-primary' : 'text-orange-500'}`}>
-                {formatCurrency(stats.balance)}
-              </p>
-            </div>
-            <div className={`${stats.balance >= 0 ? 'bg-accent-primary/20' : 'bg-orange-500/20'} p-2 sm:p-3 rounded-full`}>
-              <DollarSign className={`w-5 h-5 sm:w-6 sm:h-6 ${stats.balance >= 0 ? 'text-accent-primary' : 'text-orange-500'}`} />
+              <div>
+                <p className="stat-label">🏦 Balance Final</p>
+                <p style={{ fontSize: '12px', color: '#6b7280', margin: '4px 0 8px 0' }}>
+                  Diferencia (Ingresos - Gastos)
+                </p>
+                <p className={`stat-value ${stats.balance >= 0 ? 'success' : 'danger'}`}>
+                  {formatCurrency(stats.balance)}
+                </p>
+              </div>
+              <div>
+                <DollarSign size={32} style={{ color: stats.balance >= 0 ? '#28a745' : '#dc3545' }} />
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Cuentas */}
-      <div className="bg-gradient-to-br from-dark-card to-dark-hover rounded-lg p-4 sm:p-6 border border-dark-border shadow-xl">
-        <h2 className="text-lg sm:text-xl font-bold mb-4 flex items-center gap-2 text-white">
-          <DollarSign className="w-5 h-5 text-accent-primary" />
-          Cuentas
-        </h2>
+      <div className="card">
+        <div className="card-header">
+          <h2 className="card-title">
+            <DollarSign />
+            Mis Cuentas Bancarias
+          </h2>
+        </div>
+        <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '16px' }}>
+          Saldo actual en cada una de tus cuentas
+        </p>
         {accounts.length === 0 ? (
-          <p className="text-gray-400">No hay cuentas registradas</p>
+          <div style={{ padding: '24px', textAlign: 'center', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
+            <p style={{ color: '#6b7280' }}>No hay cuentas registradas</p>
+            <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '8px' }}>
+              Agrega una cuenta desde el menú "Cuentas" para empezar
+            </p>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-2">
             {accounts.map(account => (
-              <div key={account.id} className="bg-dark-hover border border-accent-primary/20 rounded-lg p-4 hover:border-accent-primary/50 transition-colors">
-                <h3 className="font-semibold text-white">{account.name}</h3>
-                <p className={`text-xl sm:text-2xl font-bold mt-2 ${(account.balance || 0) >= 0 ? 'text-blue-400' : 'text-blue-600'}`}>
+              <div key={account.id} className="stat-card">
+                <div style={{ marginBottom: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '20px' }}>🏦</span>
+                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>{account.name}</h3>
+                  </div>
+                  {account.description && (
+                    <p style={{ fontSize: '12px', color: '#6b7280', margin: '4px 0' }}>
+                      {account.description}
+                    </p>
+                  )}
+                </div>
+                <p className={`stat-value ${account.balance >= 0 ? 'success' : 'danger'}`}>
                   {formatCurrency(account.balance || 0)}
                 </p>
-                {account.description && (
-                  <p className="text-sm text-gray-400 mt-1">{account.description}</p>
-                )}
               </div>
             ))}
           </div>
@@ -159,101 +284,134 @@ const Dashboard = () => {
       </div>
 
       {/* Gráfico Interactivo */}
-      <div className="bg-gradient-to-br from-dark-card to-dark-hover rounded-lg p-4 sm:p-6 border border-accent-primary/30 shadow-xl">
+      <div className="card">
         {/* Controles del gráfico */}
-        <div className="mb-6 space-y-4">
-          <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
-            {chartView === 'month' ? <BarChart3 className="w-5 h-5 text-accent-primary" /> : <PieChart className="w-5 h-5 text-accent-primary" />}
-            Análisis Financiero
+        <div className="card-header">
+          <h2 className="card-title">
+            {chartDisplayType === 'pie' ? <PieChartIcon /> : <BarChart3 />}
+            Gráfico de Análisis
           </h2>
-          
+        </div>
+        
+        <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '20px' }}>
+          {chartDisplayType === 'pie' 
+            ? `Visualiza tus ${chartType === 'income' ? 'ingresos' : 'gastos'} del mes actual. Selecciona qué quieres ver:`
+            : `Visualiza la evolución de tus finanzas durante todo el año ${new Date().getFullYear()}:`}
+        </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
           {/* Selector de Tipo */}
-          <div>
-            <label className="text-sm text-gray-400 mb-2 block">Tipo de transacción</label>
-            <div className="grid grid-cols-2 gap-2">
+          <div className="form-group">
+            <label style={{ fontWeight: '600', marginBottom: '8px', display: 'block' }}>
+              ¿Qué tipo de transacción quieres analizar?
+            </label>
+            <div className="filters">
               <button
+                className={`filter-btn ${chartType === 'income' ? 'active' : ''}`}
                 onClick={() => setChartType('income')}
-                className={`px-3 sm:px-4 py-2 rounded-lg transition-all text-sm sm:text-base ${
-                  chartType === 'income'
-                    ? 'bg-gradient-to-r from-blue-400 to-blue-500 text-white shadow-lg shadow-blue-400/50'
-                    : 'bg-dark-hover text-gray-300 hover:bg-dark-border border border-dark-border'
-                }`}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
               >
-                Ingresos
+                <TrendingUp size={16} />
+                Ingresos (Dinero que recibí)
               </button>
               <button
+                className={`filter-btn ${chartType === 'expense' ? 'active' : ''}`}
                 onClick={() => setChartType('expense')}
-                className={`px-3 sm:px-4 py-2 rounded-lg transition-all text-sm sm:text-base ${
-                  chartType === 'expense'
-                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-600/50'
-                    : 'bg-dark-hover text-gray-300 hover:bg-dark-border border border-dark-border'
-                }`}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
               >
-                Egresos
+                <TrendingDown size={16} />
+                Gastos (Dinero que gasté)
               </button>
             </div>
           </div>
 
           {/* Selector de Vista */}
-          <div>
-            <label className="text-sm text-gray-400 mb-2 block">Vista</label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div className="form-group">
+            <label style={{ fontWeight: '600', marginBottom: '8px', display: 'block' }}>
+              ¿Cómo quieres ver el análisis?
+            </label>
+            <div className="filters">
               <button
+                className={`filter-btn ${chartView === 'category' ? 'active' : ''}`}
                 onClick={() => setChartView('category')}
-                className={`px-3 sm:px-4 py-2 rounded-lg transition-all text-sm sm:text-base ${
-                  chartView === 'category'
-                    ? 'bg-gradient-to-r from-accent-primary to-blue-600 text-white shadow-lg shadow-blue-500/50'
-                    : 'bg-dark-hover text-gray-300 hover:bg-dark-border border border-dark-border'
-                }`}
               >
-                Por Categoría
+                📁 Por Categoría
+                <span style={{ fontSize: '11px', display: 'block', marginTop: '4px', opacity: 0.8 }}>
+                  Distribución del mes actual
+                </span>
               </button>
               <button
+                className={`filter-btn ${chartView === 'person' ? 'active' : ''}`}
                 onClick={() => setChartView('person')}
-                className={`px-3 sm:px-4 py-2 rounded-lg transition-all text-sm sm:text-base ${
-                  chartView === 'person'
-                    ? 'bg-gradient-to-r from-accent-primary to-blue-600 text-white shadow-lg shadow-blue-500/50'
-                    : 'bg-dark-hover text-gray-300 hover:bg-dark-border border border-dark-border'
-                }`}
               >
-                Por Persona
+                👤 Por Persona
+                <span style={{ fontSize: '11px', display: 'block', marginTop: '4px', opacity: 0.8 }}>
+                  Distribución del mes actual
+                </span>
               </button>
               <button
+                className={`filter-btn ${chartView === 'month' ? 'active' : ''}`}
                 onClick={() => setChartView('month')}
-                className={`px-3 sm:px-4 py-2 rounded-lg transition-all text-sm sm:text-base ${
-                  chartView === 'month'
-                    ? 'bg-gradient-to-r from-accent-primary to-blue-600 text-white shadow-lg shadow-blue-500/50'
-                    : 'bg-dark-hover text-gray-300 hover:bg-dark-border border border-dark-border'
-                }`}
               >
-                Por Mes
+                📅 Evolución Mensual
+                <span style={{ fontSize: '11px', display: 'block', marginTop: '4px', opacity: 0.8 }}>
+                  Todo el año {new Date().getFullYear()}
+                </span>
               </button>
             </div>
           </div>
         </div>
 
+        {/* Título del gráfico actual */}
+        <div style={{ 
+          padding: '12px', 
+          backgroundColor: '#f9fafb', 
+          borderRadius: '8px', 
+          marginBottom: '16px',
+          textAlign: 'center'
+        }}>
+          <p style={{ margin: 0, fontWeight: '600', color: '#1f2937' }}>
+            {chartDisplayType === 'pie' ? (
+              <>
+                {chartType === 'income' ? '📈 Ingresos' : '📉 Gastos'} - {
+                  chartView === 'category' ? 'Por Categoría' : 'Por Persona'
+                }
+              </>
+            ) : (
+              <>
+                {chartType === 'income' ? '📈 Ingresos' : '📉 Gastos'} - Evolución Mensual
+              </>
+            )}
+          </p>
+          <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#6b7280' }}>
+            {chartDisplayType === 'pie' ? getCurrentMonthName() : `Año ${new Date().getFullYear()}`}
+          </p>
+        </div>
+
         {/* Gráfico */}
         {chartData.length === 0 ? (
-          <p className="text-gray-400 text-center py-12">No hay datos para mostrar</p>
-        ) : (
-          <ResponsiveContainer width="100%" height={300} className="sm:!h-[400px]">
-            {chartView === 'month' ? (
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis dataKey="name" stroke="#9ca3af" />
-                <YAxis stroke="#9ca3af" />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="value" fill={chartType === 'income' ? '#60a5fa' : '#3b82f6'} radius={[8, 8, 0, 0]} />
-              </BarChart>
-            ) : (
+          <div style={{ padding: '48px', textAlign: 'center', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
+            <p style={{ fontSize: '16px', color: '#6b7280', marginBottom: '8px' }}>
+              No hay datos para mostrar
+            </p>
+            <p style={{ fontSize: '12px', color: '#9ca3af' }}>
+              {chartDisplayType === 'pie' 
+                ? `No hay ${chartType === 'income' ? 'ingresos' : 'gastos'} registrados en ${getCurrentMonthName()}`
+                : 'Agrega transacciones desde el menú "Transacciones" para ver el gráfico'}
+            </p>
+          </div>
+        ) : chartDisplayType === 'pie' ? (
+          <div className="chart-layout">
+            {/* Gráfico de torta */}
+            <ResponsiveContainer width="100%" height={400}>
               <RechartsPieChart>
                 <Pie
                   data={chartData}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percent }) => percent > 0.05 ? `${name} ${(percent * 100).toFixed(0)}%` : ''}
-                  outerRadius={130}
+                  label={({ name, percent }) => percent > 0.05 ? `${(percent * 100).toFixed(0)}%` : ''}
+                  outerRadius={140}
                   fill="#8884d8"
                   dataKey="value"
                 >
@@ -263,7 +421,67 @@ const Dashboard = () => {
                 </Pie>
                 <Tooltip content={<CustomTooltip />} />
               </RechartsPieChart>
-            )}
+            </ResponsiveContainer>
+
+            {/* Lista de categorías/personas */}
+            <div className="chart-sidebar">
+              <h3>
+                {chartView === 'category' ? '📁 Categorías' : '👤 Personas'}
+              </h3>
+              {chartData.map((item, index) => {
+                const total = chartData.reduce((sum, d) => sum + d.value, 0);
+                const percentage = ((item.value / total) * 100).toFixed(1);
+                return (
+                  <div 
+                    key={item.id || index} 
+                    className="chart-item"
+                    style={{ borderLeft: `4px solid ${item.color}` }}
+                  >
+                    <div className="chart-item-header">
+                      <span className="chart-item-name">
+                        {item.icon && `${item.icon} `}{item.name}
+                      </span>
+                      <span className="chart-item-percentage">
+                        {percentage}%
+                      </span>
+                    </div>
+                    <div className="chart-item-value" style={{ color: item.color }}>
+                      {formatCurrency(item.value)}
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="chart-total">
+                <span style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>
+                  Total:
+                </span>
+                <span style={{ fontSize: '16px', fontWeight: '700', color: chartType === 'income' ? '#28a745' : '#dc3545' }}>
+                  {formatCurrency(chartData.reduce((sum, d) => sum + d.value, 0))}
+                </span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={400}>
+            <BarChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis dataKey="name" stroke="#6b7280" style={{ fontSize: '11px' }} />
+              <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend 
+                wrapperStyle={{ fontSize: '12px' }}
+                iconType="rect"
+              />
+              {chartKeys.map((key, index) => (
+                <Bar 
+                  key={key.name} 
+                  dataKey={key.name} 
+                  fill={key.color} 
+                  radius={[4, 4, 0, 0]}
+                  name={key.name === 'total' ? 'Total' : key.name}
+                />
+              ))}
+            </BarChart>
           </ResponsiveContainer>
         )}
       </div>

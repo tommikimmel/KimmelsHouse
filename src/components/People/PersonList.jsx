@@ -36,85 +36,116 @@ const PersonList = () => {
   };
 
   return (
-    <div className="bg-gradient-to-br from-dark-card to-dark-hover rounded-lg p-4 sm:p-6 border border-accent-primary/30 shadow-xl">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
+    <div className="card">
+      <div className="card-header">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-white">Integrantes de la Casa</h2>
-          <p className="text-sm text-gray-400 mt-1">{people.length} {people.length === 1 ? 'persona registrada' : 'personas registradas'}</p>
+          <h2 className="card-title">👨‍👩‍👧‍👦 Integrantes de la Casa</h2>
+          <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '4px' }}>
+            Personas que comparten gastos • {people.length} {people.length === 1 ? 'persona' : 'personas'}
+          </p>
         </div>
         <button
+          className="btn btn-primary"
           onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-accent-primary to-blue-600 text-white rounded-lg hover:shadow-lg hover:shadow-blue-500/50 transition-all text-sm sm:text-base"
+          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
         >
-          <Plus className="w-5 h-5" />
-          <span className="hidden sm:inline">Agregar Persona</span>
-          <span className="sm:hidden">Agregar</span>
+          <Plus size={16} />
+          <span>Agregar Persona</span>
         </button>
       </div>
 
       {people.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="bg-accent-primary/10 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <User className="w-10 h-10 text-accent-primary" />
-          </div>
-          <p className="text-gray-400 text-lg">No hay personas registradas</p>
-          <p className="text-gray-500 text-sm mt-2">Agrega a los integrantes de tu casa para comenzar</p>
+        <div style={{ padding: '48px', textAlign: 'center', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>👥</div>
+          <p style={{ fontSize: '16px', color: '#6b7280', marginBottom: '8px' }}>
+            No hay personas registradas
+          </p>
+          <p style={{ fontSize: '12px', color: '#9ca3af' }}>
+            Agrega a los integrantes de tu casa para gestionar gastos compartidos
+          </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-2">
           {people.map(person => (
-            <div key={person.id} className="group bg-gradient-to-br from-dark-hover to-dark-card border border-accent-primary/20 rounded-xl p-5 hover:border-accent-primary/50 transition-all hover:shadow-lg hover:shadow-accent-primary/10">
-              <div className="flex flex-col items-center text-center">
-                <div className="relative mb-4">
-                  <div className="bg-gradient-to-br from-accent-primary to-blue-600 p-4 rounded-full shadow-lg shadow-accent-primary/30">
-                    <User className="w-8 h-8 text-white" />
+            <div key={person.id} className="stat-card" style={{ 
+              borderLeft: '4px solid #007bff',
+              position: 'relative'
+            }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {/* Header con nombre y avatar */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ 
+                      width: '48px', 
+                      height: '48px', 
+                      borderRadius: '50%', 
+                      backgroundColor: '#007bff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontSize: '20px',
+                      fontWeight: '600'
+                    }}>
+                      {person.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#1f2937' }}>
+                        {person.name}
+                      </h3>
+                    </div>
                   </div>
-                  <div className="absolute -bottom-1 -right-1 bg-blue-500 rounded-full p-1">
-                    <div className="w-3 h-3 bg-blue-400 rounded-full animate-pulse"></div>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => handleEdit(person)}
+                      title="Editar persona"
+                      style={{ padding: '6px', minWidth: 'auto' }}
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => handleDelete(person)}
+                      disabled={deleting === person.id}
+                      title="Eliminar persona"
+                      style={{ padding: '6px', minWidth: 'auto' }}
+                    >
+                      {deleting === person.id ? (
+                        <Loader2 size={16} className="spinning" />
+                      ) : (
+                        <Trash2 size={16} />
+                      )}
+                    </button>
                   </div>
                 </div>
                 
-                <h3 className="font-bold text-lg text-white mb-3">{person.name}</h3>
-                
-                <div className="w-full space-y-2 mb-4">
+                {/* Información de contacto */}
+                <div style={{ 
+                  padding: '12px', 
+                  backgroundColor: '#f9fafb', 
+                  borderRadius: '8px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px'
+                }}>
                   {person.email && (
-                    <div className="flex items-center gap-2 text-sm text-gray-400 bg-dark-bg/50 rounded-lg px-3 py-2">
-                      <Mail className="w-4 h-4 text-accent-primary flex-shrink-0" />
-                      <span className="truncate">{person.email}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#4b5563' }}>
+                      <Mail size={16} style={{ color: '#6b7280' }} />
+                      <span>{person.email}</span>
                     </div>
                   )}
                   {person.phone && (
-                    <div className="flex items-center gap-2 text-sm text-gray-400 bg-dark-bg/50 rounded-lg px-3 py-2">
-                      <Phone className="w-4 h-4 text-accent-primary flex-shrink-0" />
-                      <span className="truncate">{person.phone}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#4b5563' }}>
+                      <Phone size={16} style={{ color: '#6b7280' }} />
+                      <span>{person.phone}</span>
                     </div>
                   )}
                   {!person.email && !person.phone && (
-                    <p className="text-xs text-gray-500 italic">Sin información de contacto</p>
+                    <p style={{ margin: 0, fontSize: '13px', color: '#9ca3af', textAlign: 'center' }}>
+                      Sin información de contacto
+                    </p>
                   )}
-                </div>
-
-                <div className="flex gap-2 w-full">
-                  <button
-                    onClick={() => handleEdit(person)}
-                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-accent-primary/10 text-accent-primary rounded-lg hover:bg-accent-primary hover:text-white transition-colors"
-                    title="Editar"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                    <span className="text-sm font-medium">Editar</span>
-                  </button>
-                  <button
-                    onClick={() => handleDelete(person)}
-                    disabled={deleting === person.id}
-                    className="flex items-center justify-center px-3 py-2 bg-red-600/10 text-red-400 rounded-lg hover:bg-red-600 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Eliminar"
-                  >
-                    {deleting === person.id ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="w-4 h-4" />
-                    )}
-                  </button>
                 </div>
               </div>
             </div>

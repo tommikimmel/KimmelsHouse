@@ -56,20 +56,20 @@ const PersonForm = ({ onClose, person = null }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 z-50">
-      <div className="bg-gradient-to-br from-dark-card to-dark-hover border border-accent-primary/30 rounded-lg max-w-md w-full p-4 sm:p-6 shadow-2xl shadow-accent-primary/20 max-h-[95vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold text-white">
+    <div className="modal-overlay">
+      <div className="modal">
+        <div className="modal-header">
+          <h2 className="modal-title">
             {person ? 'Editar Persona' : 'Nueva Persona'}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
-            <X className="w-6 h-6" />
+          <button className="btn btn-secondary" onClick={onClose}>
+            <X />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-white mb-1">
+        <form onSubmit={handleSubmit} className="modal-body">
+          <div className="form-group">
+            <label>
               Nombre *
             </label>
             <input
@@ -77,16 +77,13 @@ const PersonForm = ({ onClose, person = null }) => {
               name="name"
               value={formData.name}
               onChange={handleChange}
-              className={`w-full px-3 py-2 bg-dark-hover border rounded-lg focus:ring-2 focus:ring-accent-primary text-white placeholder-gray-500 ${
-                errors.name ? 'border-red-500' : 'border-dark-border'
-              }`}
               placeholder="Ej: Juan Pérez"
             />
-            {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+            {errors.name && <p>{errors.name}</p>}
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-white mb-1">
+          <div className="form-group">
+            <label>
               Email
             </label>
             <input
@@ -94,13 +91,12 @@ const PersonForm = ({ onClose, person = null }) => {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className="w-full px-3 py-2 bg-dark-hover border border-dark-border rounded-lg focus:ring-2 focus:ring-accent-primary text-white placeholder-gray-500"
               placeholder="ejemplo@email.com"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-white mb-1">
+          <div className="form-group">
+            <label>
               Teléfono
             </label>
             <input
@@ -108,28 +104,27 @@ const PersonForm = ({ onClose, person = null }) => {
               name="phone"
               value={formData.phone}
               onChange={handleChange}
-              className="w-full px-3 py-2 bg-dark-hover border border-dark-border rounded-lg focus:ring-2 focus:ring-accent-primary text-white placeholder-gray-500"
               placeholder="+54 9 11 1234-5678"
             />
           </div>
 
-          <div className="flex gap-2 pt-4">
+          <div className="modal-footer">
             <button
+              className="btn btn-secondary"
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="flex-1 px-4 py-2 border border-dark-border rounded-lg text-gray-300 hover:bg-dark-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancelar
             </button>
             <button
+              className="btn btn-primary"
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-2 bg-accent-primary text-white rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 />
                   Guardando...
                 </>
               ) : (
